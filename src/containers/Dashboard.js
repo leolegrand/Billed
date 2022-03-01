@@ -160,15 +160,11 @@ export default class {
       this.counter++
     }
 
-    // BUG HUNT: Remove existing event listener.
+    // BUG HUNT: Remove existing event listener. -- .off()
     bills.forEach((bill) => {
-      $(`#open-bill${bill.id}`).off()
-    })
-
-    bills.forEach((bill) => {
-      $(`#open-bill${bill.id}`).click((e) =>
-        this.handleEditTicket(e, bill, bills)
-      )
+      $(`#open-bill${bill.id}`)
+        .off()
+        .click((e) => this.handleEditTicket(e, bill, bills))
     })
 
     return bills
