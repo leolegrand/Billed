@@ -2,12 +2,7 @@
  * @jest-environment jsdom
  */
 
-import {
-  fireEvent,
-  screen,
-  waitFor,
-  waitForDomChange,
-} from '@testing-library/dom'
+import { screen, waitFor } from '@testing-library/dom'
 import BillsUI from '../views/BillsUI.js'
 import { bills } from '../fixtures/bills.js'
 import { ROUTES_PATH } from '../constants/routes.js'
@@ -15,12 +10,8 @@ import { localStorageMock } from '../__mocks__/localStorage.js'
 import Bills from '../containers/Bills.js'
 import { ROUTES } from '../constants/routes.js'
 import userEvent from '@testing-library/user-event'
-
-import store from '../__mocks__/store'
-
 import router from '../app/Router.js'
-import NewBillUI from '../views/NewBillUI.js'
-import { modal } from '../views/DashboardFormUI.js'
+import mockStore from '../__mocks__/store'
 
 describe('Given I am connected as an employee', () => {
   describe('When I am on Bills Page', () => {
@@ -41,6 +32,7 @@ describe('Given I am connected as an employee', () => {
       const windowIcon = screen.getByTestId('icon-window')
       expect(windowIcon.classList).toContain('active-icon')
     })
+
     test('Then no bills should be shown if they are no bills.', () => {
       document.body.innerHTML = BillsUI({ data: [] })
       const iconEye = screen.queryByTestId('icon-eye')
@@ -109,9 +101,87 @@ describe('Given I am connected as an employee', () => {
         userEvent.click(iconEyes[1])
         // La fonction handleClickIconEye a été appelée?
         expect(handleClickIconEye).toHaveBeenCalled()
-        // La modale est affichée?
+        // La modale est dans le DOM?
         const modalTarget = screen.getByTestId('modal')
         expect(modalTarget).toBeTruthy()
+      })
+    })
+  })
+})
+
+// test d'intégration GET
+describe('Given I am a user connected as Employee', () => {
+  describe('When I navigate to Bills', () => {
+    test('fetches bills from mock API GET', async () => {
+      localStorage.setItem(
+        'user',
+        JSON.stringify({ type: 'Employee', email: 'a@a' })
+      )
+      const root = document.createElement('div')
+      root.setAttribute('id', 'root')
+      document.body.append(root)
+      router()
+      window.onNavigate(ROUTES_PATH.Bills)
+      await waitFor(() => screen.getByText('Mes notes de frais'))
+      const databody = screen.getByTestId('tbody')
+      // Au moins une bill a été récupérée ?
+      expect(databody.childElementCount).toBeGreaterThan(1)
+    })
+    describe('When an error occurs on API', () => {
+      beforeEach(() => {
+        jest.spyOn(mockStore, 'bills')
+        Object.defineProperty(window, 'localStorage', {
+          value: localStorageMock,
+        })
+        window.localStorage.setItem(
+          'user',
+          JSON.stringify({
+            type: 'Employee',
+            email: 'a@a',
+          })
+        )
+        const root = document.createElement('div')
+        root.setAttribute('id', 'root')
+        document.body.appendChild(root)
+        router()
+      })
+      test('fetches bills from an API and fails with 404 message error', async () => {
+        mockStore.bills.mockImplementationOnce(() => {
+          return {
+            list: () => {
+              return Promise.reject(new Error('Erreur 404'))
+            },
+          }
+        })
+        window.onNavigate(ROUTES_PATH.Bills)
+        await new Promise(process.nextTick)
+        document.body.innerHTML = BillsUI({ error: 'Erreur 404' })
+        const errorMsg = screen.getByTestId('error-message')
+        // La <div> "error-message" a bien été injectée dans le DOM?
+        expect(errorMsg).toBeTruthy()
+        const message = screen.getByText(/Erreur 404/)
+        // Le message qui apparait est bien 'ERREUR 404'?
+        expect(message).toBeTruthy()
+      })
+
+      test('fetches bills from an API and fails with 500 message error', async () => {
+        mockStore.bills.mockImplementationOnce(() => {
+          return {
+            list: () => {
+              return Promise.reject(new Error('Erreur 500'))
+            },
+          }
+        })
+
+        window.onNavigate(ROUTES_PATH.Bills)
+        await new Promise(process.nextTick)
+        document.body.innerHTML = BillsUI({ error: 'Erreur 505' })
+        const errorMsg = screen.getByTestId('error-message')
+        // La <div> "error-message" a bien été injectée dans le DOM?
+        expect(errorMsg).toBeTruthy()
+        const message = screen.getByText(/Erreur 505/)
+        // Le message qui apparait est bien 'ERREUR 505'?
+        expect(message).toBeTruthy()
       })
     })
   })
