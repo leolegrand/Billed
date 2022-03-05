@@ -48,7 +48,6 @@ export default class NewBill {
         .catch((error) => console.error(error))
     } else {
       fileInput.value = ''
-      alert('Veuillez choisir un fichier au format .jpg, .jpeg ou .png')
     }
   }
   handleSubmit = (e) => {

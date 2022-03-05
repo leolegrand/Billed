@@ -8,6 +8,7 @@ import NewBillUI from '../views/NewBillUI.js'
 import NewBill from '../containers/NewBill.js'
 import { ROUTES } from '../constants/routes'
 import { localStorageMock } from '../__mocks__/localStorage.js'
+import bills from '../__mocks__/store.js'
 
 const onNavigate = (pathname) => {
   document.body.innerHTML = ROUTES({ pathname })
@@ -41,7 +42,54 @@ describe('Given I am connected as an employee', () => {
     })
     describe("When I select a file with the file's input", () => {
       describe('When the file is in the right format', () => {
-        test("Then the input should show the file's name ", async () => {})
+        test("Then the input should show the file's name ", async () => {
+          // ----- Connecté en tant qu'employé ----- //
+          Object.defineProperty(window, 'localStorage', {
+            value: localStorageMock,
+          })
+          window.localStorage.setItem(
+            'user',
+            JSON.stringify({
+              type: 'Employee',
+              email: 'employee@tld.com',
+              password: 'employee',
+              status: 'connected',
+            })
+          )
+          // ----- Le formulaire New Bill est affiché ----- //
+          document.body.innerHTML = NewBillUI()
+
+          // ----- Bill de test ----- //
+          const newBill = new NewBill({
+            document,
+            onNavigate,
+            store: null,
+            localStorage: window.localStorage,
+          })
+
+          // ----- Fichier de test ----- //
+          const inputData = {
+            file: 'image.png',
+            type: 'image/png',
+          }
+
+          // ----- Reproduction de la fonction handleChange ----- //
+          const handleChangeFile = jest.fn(newBill.handleChangeFile)
+          const inputFile = screen.getByTestId('file')
+          inputFile.addEventListener('change', handleChangeFile)
+          // Simulation d'un changement de fichier
+          fireEvent.change(inputFile, {
+            target: {
+              files: [
+                new File(['image'], inputData.file, { type: inputData.file }),
+              ],
+            },
+          })
+          // La fonction handleChangeFile a été appelée?
+          expect(handleChangeFile).toBeCalled()
+          // Le nom du fichier présent dans l'input correspond au fichier selectionné?
+          expect(inputFile.files[0].name).toBe(inputData.file)
+        })
       })
       describe('When the file is in the wrong format', () => {
         test('Then the file should not be accepted', async () => {
@@ -81,13 +129,7 @@ describe('Given I am connected as an employee', () => {
               ],
             },
           })
-          await waitFor(
-            () =>
-              // fileURL est null ?
-              expect(newBill.fileUrl).toBeNull(),
-            // Le placeholder est vide?
-            expect(inputFile.placeholder).toEqual('')
-          )
+          expect(inputFile.value).toEqual('')
         })
       })
     })
@@ -128,7 +170,7 @@ describe('Given I am connected as an employee', () => {
           screen.getByTestId('pct').value = '25'
           screen.getByTestId('commentary').value =
             "Je n'ai rien de personnel contre Jean-Luc mais c'est vrai qu'il a des goûts musicaux très particuliers."
-
+          expect(screen.getByTestId('file').value).not.toBeNull()
           // ----- Reproduction de la fonction handleSubmit ----- //
           const form = screen.getByTestId('form-new-bill')
           const handleSubmitNewBill = jest.fn((e) => newBill.handleSubmit(e))
@@ -161,7 +203,7 @@ describe('Given I am connected as an employee', () => {
           // ----- Le formulaire New Bill est affiché ----- //
           document.body.innerHTML = NewBillUI()
 
-          const handleSubmit = jest.fn((e) => e.preventDefault())
+          const handleSubmit = jest.fn((e) => e)
           const form = screen.getByTestId('form-new-bill')
           form.addEventListener('submit', handleSubmit)
 
