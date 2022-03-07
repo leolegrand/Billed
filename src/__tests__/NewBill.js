@@ -8,7 +8,8 @@ import NewBillUI from '../views/NewBillUI.js'
 import NewBill from '../containers/NewBill.js'
 import { ROUTES } from '../constants/routes'
 import { localStorageMock } from '../__mocks__/localStorage.js'
-import bills from '../__mocks__/store.js'
+import store from '../__mocks__/store.js'
+import mockStore from '../__mocks__/store'
 
 const onNavigate = (pathname) => {
   document.body.innerHTML = ROUTES({ pathname })
@@ -229,5 +230,28 @@ describe('Given I am connected as an employee', () => {
         })
       })
     })
+  })
+})
+
+// test intégration POST
+describe('When I post a NewBill', () => {
+  test('Then posting the NewBill from mock API POST', async () => {
+    // ----- Observation de la méthode bills du store mockée ----- //
+    const createSpyBills = jest.spyOn(mockStore, 'bills')
+
+    // ----- Données sensé être retournées par la méthode create de Bills dans le store mockée. ----- //
+    let dataToMatch = {
+      fileUrl: 'https://localhost:3456/images/test.jpg',
+      key: '1234',
+    }
+    // ----- Envoie une nouvelle bill dans le store mockée ----- //
+    let bill = {}
+    const superBill = await mockStore.bills().create(bill)
+
+    // La fonction create, provenant du store mockée, a été appelée?
+    expect(createSpyBills).toHaveBeenCalled()
+    // Les données reçues correspondent au données provenant du store mockée?
+    expect(superBill.fileUrl).toEqual(dataToMatch.fileUrl)
+    expect(superBill.key).toEqual(dataToMatch.key)
   })
 })
