@@ -10,6 +10,7 @@ import { ROUTES } from '../constants/routes'
 import { localStorageMock } from '../__mocks__/localStorage.js'
 import store from '../__mocks__/store.js'
 import mockStore from '../__mocks__/store'
+import BillsUI from '../views/BillsUI.js'
 
 const onNavigate = (pathname) => {
   document.body.innerHTML = ROUTES({ pathname })
@@ -17,7 +18,7 @@ const onNavigate = (pathname) => {
 
 describe('Given I am connected as an employee', () => {
   describe('When I am on NewBill Page', () => {
-    test('Then it should render the NewBill Page', () => {
+    beforeEach(() => {
       // ----- Connecté en tant qu'employé ----- //
       Object.defineProperty(window, 'localStorage', {
         value: localStorageMock,
@@ -33,7 +34,8 @@ describe('Given I am connected as an employee', () => {
       )
       // ----- Le formulaire New Bill est affiché ----- //
       document.body.innerHTML = NewBillUI()
-
+    })
+    test('Then it should render the NewBill Page', () => {
       // Le message affiché correspond au rendu attendu?
       const ndf = screen.getByText('Envoyer une note de frais')
       expect(ndf).toBeVisible()
@@ -44,22 +46,6 @@ describe('Given I am connected as an employee', () => {
     describe("When I select a file with the file's input", () => {
       describe('When the file is in the right format', () => {
         test("Then the input should show the file's name ", async () => {
-          // ----- Connecté en tant qu'employé ----- //
-          Object.defineProperty(window, 'localStorage', {
-            value: localStorageMock,
-          })
-          window.localStorage.setItem(
-            'user',
-            JSON.stringify({
-              type: 'Employee',
-              email: 'employee@tld.com',
-              password: 'employee',
-              status: 'connected',
-            })
-          )
-          // ----- Le formulaire New Bill est affiché ----- //
-          document.body.innerHTML = NewBillUI()
-
           // ----- Bill de test ----- //
           const newBill = new NewBill({
             document,
@@ -94,22 +80,6 @@ describe('Given I am connected as an employee', () => {
       })
       describe('When the file is in the wrong format', () => {
         test('Then the file should not be accepted', async () => {
-          // ----- Connecté en tant qu'employé ----- //
-          Object.defineProperty(window, 'localStorage', {
-            value: localStorageMock,
-          })
-          window.localStorage.setItem(
-            'user',
-            JSON.stringify({
-              type: 'Employee',
-              email: 'employee@tld.com',
-              password: 'employee',
-              status: 'connected',
-            })
-          )
-          // ----- Le formulaire New Bill est affiché ----- //
-          document.body.innerHTML = NewBillUI()
-
           // ----- Bill de test ----- //
           const newBill = new NewBill({
             document,
@@ -130,6 +100,7 @@ describe('Given I am connected as an employee', () => {
               ],
             },
           })
+          // Le champs de l'input est bien vide?
           expect(inputFile.value).toEqual('')
         })
       })
@@ -137,22 +108,6 @@ describe('Given I am connected as an employee', () => {
     describe('When I click on the send button', () => {
       describe('When every fields are correctly completed', () => {
         test('Then it should redirect to Bills Page', async () => {
-          // ----- Connecté en tant qu'employé ----- //
-          Object.defineProperty(window, 'localStorage', {
-            value: localStorageMock,
-          })
-          window.localStorage.setItem(
-            'user',
-            JSON.stringify({
-              type: 'Employee',
-              email: 'employee@tld.com',
-              password: 'employee',
-              status: 'connected',
-            })
-          )
-          // ----- Le formulaire New Bill est affiché ----- //
-          document.body.innerHTML = NewBillUI()
-
           // ----- Bill de test ----- //
           const newBill = new NewBill({
             document,
@@ -188,22 +143,6 @@ describe('Given I am connected as an employee', () => {
       })
       describe('When at least one required field is not correctly completed', () => {
         test('Then the user should stay on New Bill Page', async () => {
-          // ----- Connecté en tant qu'employé ----- //
-          Object.defineProperty(window, 'localStorage', {
-            value: localStorageMock,
-          })
-          window.localStorage.setItem(
-            'user',
-            JSON.stringify({
-              type: 'Employee',
-              email: 'employee@tld.com',
-              password: 'employee',
-              status: 'connected',
-            })
-          )
-          // ----- Le formulaire New Bill est affiché ----- //
-          document.body.innerHTML = NewBillUI()
-
           const handleSubmit = jest.fn((e) => e)
           const form = screen.getByTestId('form-new-bill')
           form.addEventListener('submit', handleSubmit)
@@ -233,7 +172,7 @@ describe('Given I am connected as an employee', () => {
   })
 })
 
-// test intégration POST
+// API POST
 describe('When I post a NewBill', () => {
   test('Then posting the NewBill from mock API POST', async () => {
     // ----- Observation de la méthode bills du store mockée ----- //
@@ -253,5 +192,37 @@ describe('When I post a NewBill', () => {
     // Les données reçues correspondent au données provenant du store mockée?
     expect(superBill.fileUrl).toEqual(dataToMatch.fileUrl)
     expect(superBill.key).toEqual(dataToMatch.key)
+  })
+  test('fetches bills from an API and fails with 404 message error', async () => {
+    // ----- Observation de la méthode bills du store mockée ----- //
+    jest.spyOn(mockStore, 'bills')
+    // ----- Simulation d'une requete rejetée par l'API, cause Erreur 404 ----- //
+    mockStore.bills.mockImplementationOnce(() => {
+      return {
+        create: () => {
+          return Promise.reject(new Error('Erreur 404'))
+        },
+      }
+    })
+    document.body.innerHTML = BillsUI({ error: 'Erreur 404' })
+    const message = screen.getByText(/Erreur 404/)
+    // Le message d'erreur est-il visible à l'écran?
+    expect(message).toBeVisible()
+  })
+  test('fetches bills from an API and fails with 505 message error', async () => {
+    // ----- Observation de la méthode bills du store mockée ----- //
+    jest.spyOn(mockStore, 'bills')
+    // ----- Simulation d'une requete rejetée par l'API, cause Erreur 505 ----- //
+    mockStore.bills.mockImplementationOnce(() => {
+      return {
+        create: () => {
+          return Promise.reject(new Error('Erreur 505'))
+        },
+      }
+    })
+    document.body.innerHTML = BillsUI({ error: 'Erreur 505' })
+    const message = screen.getByText(/Erreur 505/)
+    // Le message d'erreur est-il visible à l'écran?
+    expect(message).toBeVisible()
   })
 })

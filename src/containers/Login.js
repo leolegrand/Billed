@@ -87,6 +87,7 @@ export default class Login {
   }
 
   // not need to cover this function by tests
+  /* istanbul ignore next */
   createUser = (user) => {
     if (this.store) {
       return this.store

@@ -95,10 +95,10 @@ describe('Given I am connected as an employee', () => {
 
         const iconEyes = screen.getAllByTestId('icon-eye')
         const handleClickIconEye = jest.fn(
-          testingBills.handleClickIconEye(iconEyes[1])
+          testingBills.handleClickIconEye(iconEyes[0])
         )
-        iconEyes[1].addEventListener('click', handleClickIconEye)
-        userEvent.click(iconEyes[1])
+        iconEyes[0].addEventListener('click', handleClickIconEye)
+        userEvent.click(iconEyes[0])
         // La fonction handleClickIconEye a été appelée?
         expect(handleClickIconEye).toHaveBeenCalled()
         // La modale est dans le DOM?
@@ -109,7 +109,7 @@ describe('Given I am connected as an employee', () => {
   })
 })
 
-// test d'intégration GET
+// API GET
 describe('Given I am a user connected as Employee', () => {
   describe('When I navigate to Bills', () => {
     test('fetches bills from mock API GET', async () => {
