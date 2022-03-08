@@ -11,6 +11,7 @@ import { localStorageMock } from '../__mocks__/localStorage.js'
 import store from '../__mocks__/store.js'
 import mockStore from '../__mocks__/store'
 import BillsUI from '../views/BillsUI.js'
+import userEvent from '@testing-library/user-event'
 
 const onNavigate = (pathname) => {
   document.body.innerHTML = ROUTES({ pathname })
@@ -112,8 +113,13 @@ describe('Given I am connected as an employee', () => {
           const newBill = new NewBill({
             document,
             onNavigate,
-            store: null,
+            store: mockStore,
             localStorage: window.localStorage,
+          })
+
+          // ----- Faux fichier ----- //
+          const fakeFile = new File(['hello'], 'hello.png', {
+            type: 'image/png',
           })
 
           // ----- Le formulaire est complet ----- //
@@ -126,7 +132,8 @@ describe('Given I am connected as an employee', () => {
           screen.getByTestId('pct').value = '25'
           screen.getByTestId('commentary').value =
             "Je n'ai rien de personnel contre Jean-Luc mais c'est vrai qu'il a des goûts musicaux très particuliers."
-          expect(screen.getByTestId('file').value).not.toBeNull()
+          userEvent.upload(screen.getByTestId('file'), fakeFile)
+
           // ----- Reproduction de la fonction handleSubmit ----- //
           const form = screen.getByTestId('form-new-bill')
           const handleSubmitNewBill = jest.fn((e) => newBill.handleSubmit(e))
@@ -134,6 +141,7 @@ describe('Given I am connected as an employee', () => {
 
           // Simulation d'un submit
           fireEvent.submit(form)
+
           // La fonction handleSubmitNewBill a été appelée?
           expect(handleSubmitNewBill).toHaveBeenCalled()
           // L'utilisateur est bien retourné sur la page Bills ?
@@ -175,26 +183,38 @@ describe('Given I am connected as an employee', () => {
 // API POST
 describe('When I post a NewBill', () => {
   test('Then posting the NewBill from mock API POST', async () => {
-    // ----- Observation de la méthode bills du store mockée ----- //
+    // ----- Observation de la méthode bills du mockStore ----- //
     const createSpyBills = jest.spyOn(mockStore, 'bills')
 
-    // ----- Données sensé être retournées par la méthode create de Bills dans le store mockée. ----- //
-    let dataToMatch = {
-      fileUrl: 'https://localhost:3456/images/test.jpg',
-      key: '1234',
-    }
-    // ----- Envoie une nouvelle bill dans le store mockée ----- //
-    let bill = {}
-    const superBill = await mockStore.bills().create(bill)
+    // ----- On récupère la liste des bills présentent dans le mockStore ----- //
+    const billsList = await mockStore.bills().list()
+    // Il y a bien 4 bills, par défault, dans le mockStore?
+    expect(billsList.length).toBe(4)
 
-    // La fonction create, provenant du store mockée, a été appelée?
-    expect(createSpyBills).toHaveBeenCalled()
-    // Les données reçues correspondent au données provenant du store mockée?
-    expect(superBill.fileUrl).toEqual(dataToMatch.fileUrl)
-    expect(superBill.key).toEqual(dataToMatch.key)
+    // ----- Envoie une nouvelle bill dans le mockStore ----- //
+    let bill = {
+      email: 'employee@tld.com',
+      type: 'Hôtel et logement',
+      name: 'mocked bill des enfers',
+      amount: '400',
+      date: '2004-04-04',
+      vat: '80',
+      pct: '20',
+      commentary: 'mocked bill for POST test',
+      fileUrl: 'https://localhost:3456/images/test.jpg',
+      fileName: 'test.jpg',
+      status: 'pending',
+    }
+
+    await mockStore
+      .bills()
+      .update({ data: JSON.stringify(bill), selector: '1234' })
+
+    // Le nombre de bills dans le store a t'il été incrémenté suite à notre update?
+    waitFor(() => expect(billsList.length).toBe(5))
   })
   test('fetches bills from an API and fails with 404 message error', async () => {
-    // ----- Observation de la méthode bills du store mockée ----- //
+    // ----- Observation de la méthode bills du mockStore ----- //
     jest.spyOn(mockStore, 'bills')
     // ----- Simulation d'une requete rejetée par l'API, cause Erreur 404 ----- //
     mockStore.bills.mockImplementationOnce(() => {
@@ -210,18 +230,18 @@ describe('When I post a NewBill', () => {
     expect(message).toBeVisible()
   })
   test('fetches bills from an API and fails with 505 message error', async () => {
-    // ----- Observation de la méthode bills du store mockée ----- //
+    // ----- Observation de la méthode bills du mockStore ----- //
     jest.spyOn(mockStore, 'bills')
-    // ----- Simulation d'une requete rejetée par l'API, cause Erreur 505 ----- //
+    // ----- Simulation d'une requete rejetée par l'API, cause Erreur 500 ----- //
     mockStore.bills.mockImplementationOnce(() => {
       return {
         create: () => {
-          return Promise.reject(new Error('Erreur 505'))
+          return Promise.reject(new Error('Erreur 500'))
         },
       }
     })
-    document.body.innerHTML = BillsUI({ error: 'Erreur 505' })
-    const message = screen.getByText(/Erreur 505/)
+    document.body.innerHTML = BillsUI({ error: 'Erreur 500' })
+    const message = screen.getByText(/Erreur 500/)
     // Le message d'erreur est-il visible à l'écran?
     expect(message).toBeVisible()
   })

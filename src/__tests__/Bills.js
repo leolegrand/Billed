@@ -175,12 +175,12 @@ describe('Given I am a user connected as Employee', () => {
 
         window.onNavigate(ROUTES_PATH.Bills)
         await new Promise(process.nextTick)
-        document.body.innerHTML = BillsUI({ error: 'Erreur 505' })
+        document.body.innerHTML = BillsUI({ error: 'Erreur 500' })
         const errorMsg = screen.getByTestId('error-message')
         // La <div> "error-message" a bien été injectée dans le DOM?
         expect(errorMsg).toBeTruthy()
-        const message = screen.getByText(/Erreur 505/)
-        // Le message qui apparait est bien 'ERREUR 505'?
+        const message = screen.getByText(/Erreur 500/)
+        // Le message qui apparait est bien 'ERREUR 500'?
         expect(message).toBeTruthy()
       })
     })
