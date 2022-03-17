@@ -4,14 +4,16 @@
 
 import '@testing-library/jest-dom/extend-expect'
 import { screen, fireEvent, waitFor } from '@testing-library/dom'
+import userEvent from '@testing-library/user-event'
+import BillsUI from '../views/BillsUI.js'
 import NewBillUI from '../views/NewBillUI.js'
 import NewBill from '../containers/NewBill.js'
-import { ROUTES } from '../constants/routes'
+import { ROUTES, ROUTES_PATH } from '../constants/routes'
 import { localStorageMock } from '../__mocks__/localStorage.js'
-import store from '../__mocks__/store.js'
 import mockStore from '../__mocks__/store'
-import BillsUI from '../views/BillsUI.js'
-import userEvent from '@testing-library/user-event'
+import router from '../app/Router'
+
+jest.mock('../app/store', () => mockStore)
 
 const onNavigate = (pathname) => {
   document.body.innerHTML = ROUTES({ pathname })
@@ -184,7 +186,7 @@ describe('Given I am connected as an employee', () => {
 describe('When I post a NewBill', () => {
   test('Then posting the NewBill from mock API POST', async () => {
     // ----- Observation de la méthode bills du mockStore ----- //
-    const createSpyBills = jest.spyOn(mockStore, 'bills')
+    jest.spyOn(mockStore, 'bills')
 
     // ----- On récupère la liste des bills présentent dans le mockStore ----- //
     const billsList = await mockStore.bills().list()
@@ -206,9 +208,7 @@ describe('When I post a NewBill', () => {
       status: 'pending',
     }
 
-    await mockStore
-      .bills()
-      .update({ data: JSON.stringify(bill), selector: '1234' })
+    mockStore.bills().create(bill)
 
     // Le nombre de bills dans le store a t'il été incrémenté suite à notre update?
     waitFor(() => expect(billsList.length).toBe(5))

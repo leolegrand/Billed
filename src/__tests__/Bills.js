@@ -3,15 +3,16 @@
  */
 
 import { screen, waitFor } from '@testing-library/dom'
-import BillsUI from '../views/BillsUI.js'
-import { bills } from '../fixtures/bills.js'
-import { ROUTES_PATH } from '../constants/routes.js'
-import { localStorageMock } from '../__mocks__/localStorage.js'
-import Bills from '../containers/Bills.js'
-import { ROUTES } from '../constants/routes.js'
 import userEvent from '@testing-library/user-event'
-import router from '../app/Router.js'
+import BillsUI from '../views/BillsUI.js'
+import Bills from '../containers/Bills.js'
+import { ROUTES, ROUTES_PATH } from '../constants/routes.js'
+import { localStorageMock } from '../__mocks__/localStorage.js'
 import mockStore from '../__mocks__/store'
+import { bills } from '../fixtures/bills.js'
+import router from '../app/Router.js'
+
+jest.mock('../app/store', () => mockStore)
 
 describe('Given I am connected as an employee', () => {
   describe('When I am on Bills Page', () => {
@@ -34,13 +35,17 @@ describe('Given I am connected as an employee', () => {
     })
 
     test('Then no bills should be shown if they are no bills.', () => {
+      // ----- Bills UI ne contient aucune donnée ----- //
       document.body.innerHTML = BillsUI({ data: [] })
       const iconEye = screen.queryByTestId('icon-eye')
+      // Aucune icone "Visualiser" n'est présente sur la page?
       expect(iconEye).toBeNull()
     })
     test('Then at least one bill should be shown if there is one bill or more.', () => {
+      // ----- Bills UI contient des données ----- //
       document.body.innerHTML = BillsUI({ data: bills })
       const iconEyes = screen.getAllByTestId('icon-eye')
+      // Au moins une icone "Visualiser" est présente sur la page ?
       expect(iconEyes.length).toBeGreaterThanOrEqual(1)
     })
     test('Then bills should be ordered from earliest to latest', () => {
@@ -52,6 +57,7 @@ describe('Given I am connected as an employee', () => {
         .map((a) => a.innerHTML)
       const antiChrono = (a, b) => (a < b ? 1 : -1)
       const datesSorted = [...dates].sort(antiChrono)
+      // Les bills sont bien triées par ordre chronologique ?
       expect(dates).toEqual(datesSorted)
     })
 
@@ -60,18 +66,24 @@ describe('Given I am connected as an employee', () => {
         const onNavigate = (pathname) => {
           document.body.innerHTML = ROUTES({ pathname })
         }
+        // ----- Bill de test ----- //
         const bills = new Bills({
           document,
           onNavigate,
           store: null,
           localStorage: null,
         })
+
+        // ----- Création des eventListener sur la bill de test ----- //
         const handleClickNewBill = jest.fn((e) => bills.handleClickNewBill(e))
         const buttonNewBill = screen.getByTestId('btn-new-bill')
         buttonNewBill.addEventListener('click', handleClickNewBill)
+
+        // ----- Simulation de l'action 'clique' d'un utilisateur ----- //
         userEvent.click(buttonNewBill)
 
         const formNewBill = screen.getByTestId('form-new-bill')
+
         // La fonction handleClickNewbill a été appelée?
         expect(handleClickNewBill).toHaveBeenCalled()
         // Le menu New Bill est affiché?
@@ -86,6 +98,7 @@ describe('Given I am connected as an employee', () => {
         const onNavigate = (pathname) => {
           document.body.innerHTML = ROUTES({ pathname })
         }
+        // ----- Bill de test ----- //
         const testingBills = new Bills({
           document,
           onNavigate,
@@ -93,11 +106,13 @@ describe('Given I am connected as an employee', () => {
           localStorage: null,
         })
 
+        // ----- Création d'event Listener  ----- //
         const iconEyes = screen.getAllByTestId('icon-eye')
         const handleClickIconEye = jest.fn(
           testingBills.handleClickIconEye(iconEyes[0])
         )
         iconEyes[0].addEventListener('click', handleClickIconEye)
+        // -----  Simulation du clique utilisateur ----- //
         userEvent.click(iconEyes[0])
         // La fonction handleClickIconEye a été appelée?
         expect(handleClickIconEye).toHaveBeenCalled()
@@ -155,12 +170,7 @@ describe('Given I am a user connected as Employee', () => {
         })
         window.onNavigate(ROUTES_PATH.Bills)
         await new Promise(process.nextTick)
-        document.body.innerHTML = BillsUI({ error: 'Erreur 404' })
-        const errorMsg = screen.getByTestId('error-message')
-        // La <div> "error-message" a bien été injectée dans le DOM?
-        expect(errorMsg).toBeTruthy()
-        const message = screen.getByText(/Erreur 404/)
-        // Le message qui apparait est bien 'ERREUR 404'?
+        const message = await screen.getByText(/Erreur 404/)
         expect(message).toBeTruthy()
       })
 
@@ -175,10 +185,6 @@ describe('Given I am a user connected as Employee', () => {
 
         window.onNavigate(ROUTES_PATH.Bills)
         await new Promise(process.nextTick)
-        document.body.innerHTML = BillsUI({ error: 'Erreur 500' })
-        const errorMsg = screen.getByTestId('error-message')
-        // La <div> "error-message" a bien été injectée dans le DOM?
-        expect(errorMsg).toBeTruthy()
         const message = screen.getByText(/Erreur 500/)
         // Le message qui apparait est bien 'ERREUR 500'?
         expect(message).toBeTruthy()
